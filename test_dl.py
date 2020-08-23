@@ -14,7 +14,25 @@ from tensorflow.contrib.slim import fully_connected as fc
 import glob
 from pyspark.sql.types import *
 from collections import OrderedDict
-#import horovod as hvd
+import horovod.tensorflow as hvd
+#import horovod.spark as hvd
+from pyspark import SparkConf
+from pyspark import SparkContext
+from pyspark.sql import SparkSession
+conf = SparkConf().setAppName('training').setMaster("spark://spark-master:7077")
+spark = SparkSession.builder.config(conf=conf).getOrCreate()
+
+hvd.init()
+print('local_rank=%d, rank=%d, size=%d' % (hvd.local_rank(), hvd.rank(), hvd.size()))
+def fn(magic_number):
+    hvd.init()
+ #cpus = tf.config.experimental.list_physical_devices('CPU')
+    print('local_rank=%d, rank=%d, size=%d' % (hvd.local_rank(), hvd.rank(), hvd.size()))
+    return hvd.rank()
+
+#For testing
+#import horovod.spark
+#horovod.spark.run(fn, args=(42,))
 
 
 class GenerateData:
@@ -154,7 +172,7 @@ class AEModel:
         :param batch_size: mini-batch size
         """
         self.nz = nz
-        self.learning_rate = learning_rate
+        self.learning_rate = learning_rate * hvd.size() ## learning rate need to multiply worker number in order to compensate for the batch size
         self.epochs = epochs
         self.batch_size = batch_size
 
@@ -239,8 +257,8 @@ class AEModel:
         # saver = tf.train.Saver(tf.global_variables())
         saver = tf.train.Saver(var_list=self.saveable_variables, max_to_keep=2)
 
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=self.gpu_mem_frac, allow_growth=True)
-        config = tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True)
+        #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=self.gpu_mem_frac, allow_growth=True)
+        config = tf.ConfigProto(allow_soft_placement=True)
         #calculate the number of iteration per epoch
         #todo need fundtion to calculate the num_samples,here use 10 instread for testing
         step_per_epoch = int(4/self.batch_size)
@@ -256,7 +274,7 @@ class AEModel:
             train_losses = []
             val_losses = []
             run_start_time = time.time()
-            for step in range(total_steps):
+            for step in range(int(total_steps/hvd.size())):
                 global_step = sess.run(self.global_step)
                 print("global_step:", global_step)
                 val_handle_eval = sess.run(self.val_handle)
