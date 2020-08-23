@@ -146,6 +146,13 @@ class GenerateData:
 class AEModel:
 
     def __init__(self,nz=None,learning_rate=None,epochs=None,batch_size=None):
+        """
+
+        :param nz: dimensino of the dim reduction data
+        :param learning_rate: learning rate for training
+        :param epochs: number of epch used for training
+        :param batch_size: mini-batch size
+        """
         self.nz = nz
         self.learning_rate = learning_rate
         self.epochs = epochs
