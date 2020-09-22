@@ -125,9 +125,9 @@ class GenerateData:
         val_tf_dataset = val_dataset.make_dataset(batch_size)
         val_iterator = val_tf_dataset.make_one_shot_iterator()
         val_handle = val_iterator.string_handle()
-        #iterator = tf.data.Iterator.from_string_handle(
-        #    train_handle, train_tf_dataset.output_types, train_tf_dataset.output_shapes)
-        inputs = train_iterator.get_next()
+        iterator = tf.data.Iterator.from_string_handle(
+            train_handle, train_tf_dataset.output_types, train_tf_dataset.output_shapes)
+        inputs = iterator.get_next()
         val = val_iterator.get_next()
         return inputs,train_handle, val_handle
 
